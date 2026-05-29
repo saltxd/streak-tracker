@@ -38,7 +38,7 @@ public final class StreakStore {
         if let stored = defaults.object(forKey: Key.startDay) as? Date {
             startDay = stored
         } else if !defaults.bool(forKey: Key.everStarted) {
-            // First-ever launch: begin a streak today so the menu bar reads 1 immediately.
+            // First-ever launch: begin a streak today (reads 0 now, 1 at the next midnight).
             startDay = DayMath.today(now, calendar: calendar)
             defaults.set(startDay, forKey: Key.startDay)
             defaults.set(true, forKey: Key.everStarted)
@@ -60,13 +60,13 @@ public final class StreakStore {
         }
     }
 
-    /// Begin a fresh streak — today reads 1. (Not logged as a slip.)
+    /// Begin a fresh streak — today reads 0, then 1 at the next midnight. (Not a slip.)
     public func start(now: Date = Date()) {
         setAnchor(DayMath.today(now, calendar: calendar), now: now)
     }
 
-    /// Backdate the streak to the day it actually began — that day reads 1. A correction,
-    /// so it is *not* recorded in reset history.
+    /// Backdate the streak to the day it actually began — that day reads 0, and each full
+    /// day since adds 1. A correction, so it is *not* recorded in reset history.
     public func setStartDate(_ date: Date, now: Date = Date()) {
         setAnchor(calendar.startOfDay(for: date), now: now)
     }
@@ -78,7 +78,7 @@ public final class StreakStore {
             history.append(ResetRecord(endedOn: calendar.startOfDay(for: now), length: ended))
             saveHistory()
         }
-        setAnchor(DayMath.tomorrow(now, calendar: calendar), now: now)
+        setAnchor(DayMath.today(now, calendar: calendar), now: now)
     }
 
     private func setAnchor(_ anchor: Date, now: Date) {
