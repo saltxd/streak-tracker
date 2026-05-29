@@ -1,4 +1,5 @@
 import AppKit
+import StreakKit
 
 /// Builds the menu-bar glyph: an SF Symbol flame followed by the streak number,
 /// composited into one **template** `NSImage`. A template image is a pure alpha mask,
@@ -6,21 +7,21 @@ import AppKit
 /// light/dark menu bars and the blue highlight when the menu is open.
 ///
 /// `MenuBarExtra` won't reliably render an SF Symbol interpolated into `Text`, so we
-/// draw the composite ourselves and hand it over as a single image.
+/// draw the composite ourselves and hand it over as a single image. The flame's symbol
+/// + weight come from the pure `StreakTier` decision (classic 7/30/100/365 milestones).
 enum MenuBarIcon {
 
-    /// Threshold milestones (classic 7 / 30 / 100 / 365). The flame strengthens as the
-    /// streak grows: hollow when cold (0), then filled and progressively heavier. Staying
-    /// monochrome keeps it consistent with the native menu-bar icons.
     static func glyph(for count: Int) -> (symbol: String, weight: NSFont.Weight) {
-        switch count {
-        case ..<1:      return ("flame", .regular)        // 0 — cold, just reset
-        case 1..<7:     return ("flame.fill", .regular)   // building
-        case 7..<30:    return ("flame.fill", .semibold)  // 1 week+
-        case 30..<100:  return ("flame.fill", .bold)      // 1 month+
-        case 100..<365: return ("flame.fill", .heavy)     // 100 club
-        default:        return ("flame.fill", .black)     // 1 year+
+        let tier = StreakTier(streak: count)
+        let weight: NSFont.Weight
+        switch tier {
+        case .cold, .building: weight = .regular
+        case .week:            weight = .semibold
+        case .month:           weight = .bold
+        case .hundred:         weight = .heavy
+        case .year:            weight = .black
         }
+        return (tier.isLit ? "flame.fill" : "flame", weight)
     }
 
     static func make(count: Int) -> NSImage {
