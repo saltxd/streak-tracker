@@ -8,9 +8,25 @@ import AppKit
 /// `MenuBarExtra` won't reliably render an SF Symbol interpolated into `Text`, so we
 /// draw the composite ourselves and hand it over as a single image.
 enum MenuBarIcon {
+
+    /// Threshold milestones (classic 7 / 30 / 100 / 365). The flame strengthens as the
+    /// streak grows: hollow when cold (0), then filled and progressively heavier. Staying
+    /// monochrome keeps it consistent with the native menu-bar icons.
+    static func glyph(for count: Int) -> (symbol: String, weight: NSFont.Weight) {
+        switch count {
+        case ..<1:      return ("flame", .regular)        // 0 — cold, just reset
+        case 1..<7:     return ("flame.fill", .regular)   // building
+        case 7..<30:    return ("flame.fill", .semibold)  // 1 week+
+        case 30..<100:  return ("flame.fill", .bold)      // 1 month+
+        case 100..<365: return ("flame.fill", .heavy)     // 100 club
+        default:        return ("flame.fill", .black)     // 1 year+
+        }
+    }
+
     static func make(count: Int) -> NSImage {
-        let symbolConfig = NSImage.SymbolConfiguration(pointSize: NSFont.systemFontSize, weight: .regular)
-        let flame = NSImage(systemSymbolName: "flame", accessibilityDescription: "Streak")?
+        let (symbol, weight) = glyph(for: count)
+        let symbolConfig = NSImage.SymbolConfiguration(pointSize: NSFont.systemFontSize, weight: weight)
+        let flame = NSImage(systemSymbolName: symbol, accessibilityDescription: "Streak")?
             .withSymbolConfiguration(symbolConfig)
         let flameSize = flame?.size ?? .zero
 
