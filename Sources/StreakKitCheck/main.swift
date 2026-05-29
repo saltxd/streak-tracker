@@ -84,6 +84,46 @@ check("state persists across re-init (current)", second.currentStreak == 7)
 check("state persists across re-init (longest)", second.longestStreak == 7)
 def.removePersistentDomain(forName: suite)
 
+print("Set start date (backdate):")
+let bd = makeStore(now: d(2026, 5, 29))
+bd.setStartDate(d(2026, 5, 22), now: d(2026, 5, 29)) // started a week ago
+check("backdate makes today day 8", bd.currentStreak == 8)
+check("backdate does NOT log a reset", bd.history.isEmpty)
+check("backdate bumps longest", bd.longestStreak == 8)
+
+print("Reset history:")
+let h = makeStore(now: d(2026, 5, 1))
+h.refresh(now: d(2026, 5, 5))            // 5-day streak
+h.reset(now: d(2026, 5, 5))              // break it
+check("reset logs one record", h.history.count == 1)
+check("record length is 5", h.lastReset?.length == 5)
+check("record ended on reset day", h.lastReset?.endedOn == cal.startOfDay(for: d(2026, 5, 5)))
+h.refresh(now: d(2026, 5, 9))            // new streak now 4 (started May 6)
+h.reset(now: d(2026, 5, 9))
+check("second reset appends", h.history.count == 2)
+check("history ordered oldest-first", h.history.first?.length == 5 && h.history.last?.length == 4)
+
+let hsuite = "check.\(UUID().uuidString)"
+let hdef = UserDefaults(suiteName: hsuite)!
+hdef.removePersistentDomain(forName: hsuite)
+let hp1 = StreakStore(defaults: hdef, calendar: cal, now: d(2026, 5, 1))
+hp1.refresh(now: d(2026, 5, 4))
+hp1.reset(now: d(2026, 5, 4))            // logs a 4-day streak
+let hp2 = StreakStore(defaults: hdef, calendar: cal, now: d(2026, 5, 6))
+check("history persists across re-init", hp2.history.count == 1 && hp2.lastReset?.length == 4)
+hdef.removePersistentDomain(forName: hsuite)
+
+print("Threshold tiers (StreakTier):")
+check("0 days → cold (hollow)", StreakTier(streak: 0) == .cold && !StreakTier(streak: 0).isLit)
+check("1 day → building (lit)", StreakTier(streak: 1) == .building && StreakTier(streak: 1).isLit)
+check("6 → still building", StreakTier(streak: 6) == .building)
+check("7 → week", StreakTier(streak: 7) == .week)
+check("29 → still week", StreakTier(streak: 29) == .week)
+check("30 → month", StreakTier(streak: 30) == .month)
+check("100 → hundred", StreakTier(streak: 100) == .hundred)
+check("364 → still hundred", StreakTier(streak: 364) == .hundred)
+check("365 → year", StreakTier(streak: 365) == .year)
+
 if failures == 0 {
     print("\nAll checks passed ✅")
 } else {
