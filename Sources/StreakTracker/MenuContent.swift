@@ -9,7 +9,7 @@ struct MenuContent: View {
 
     var body: some View {
         if store.currentStreak == 0 {
-            Text("🔥 0 days — back to 1 tomorrow")
+            Text("🔥 0 days — counts 1 tomorrow")
         } else {
             Text("🔥 \(store.currentStreak) \(dayWord(store.currentStreak)) strong")
         }
@@ -17,7 +17,7 @@ struct MenuContent: View {
         if store.longestStreak > 0 {
             Text("Longest: \(store.longestStreak) \(dayWord(store.longestStreak))")
         }
-        if store.currentStreak >= 1, let started = store.startDay {
+        if let started = store.startDay {
             Text("Started \(started.formatted(date: .abbreviated, time: .omitted))")
         }
 
@@ -67,7 +67,7 @@ struct MenuContent: View {
         let picker = StartDatePicker(initialDate: store.startDay ?? Date())
         let alert = NSAlert()
         alert.messageText = "Set your streak's start date"
-        alert.informativeText = "Pick the day your streak began — that day counts as day 1."
+        alert.informativeText = "Pick the day your streak began. That day counts as 0; each full day since adds 1."
         alert.accessoryView = picker.view
         alert.addButton(withTitle: "Set")
         alert.addButton(withTitle: "Cancel")

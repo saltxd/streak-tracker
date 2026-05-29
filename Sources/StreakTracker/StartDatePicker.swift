@@ -48,8 +48,10 @@ final class StartDatePicker: NSObject {
 
     private func updatePreview() {
         let value = DayMath.streakValue(startDay: chosenDate, now: now, calendar: calendar)
-        previewLabel.stringValue = value == 1
-            ? "That makes today day 1."
-            : "That makes today day \(value)."
+        switch value {
+        case 0:  previewLabel.stringValue = "Starts today at 0 — counts 1 tomorrow."
+        case 1:  previewLabel.stringValue = "That's a 1-day streak."
+        default: previewLabel.stringValue = "That's a \(value)-day streak."
+        }
     }
 }
