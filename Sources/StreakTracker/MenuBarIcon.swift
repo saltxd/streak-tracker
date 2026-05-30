@@ -40,15 +40,16 @@ enum MenuBarIcon {
         let height = ceil(max(flameSize.height, textSize.height))
         let width = ceil(flameSize.width + spacing + textSize.width)
 
-        let image = NSImage(size: NSSize(width: width, height: height))
-        image.lockFocus()
-        if let flame {
-            flame.draw(in: NSRect(x: 0, y: (height - flameSize.height) / 2,
-                                  width: flameSize.width, height: flameSize.height))
+        // Use the drawing-handler constructor (not lockFocus) so the glyph is
+        // resolution-independent: the system invokes this closure at the display's
+        // native scale, keeping it crisp on Retina instead of upscaling a 1× bitmap.
+        let image = NSImage(size: NSSize(width: width, height: height), flipped: false) { _ in
+            flame?.draw(in: NSRect(x: 0, y: (height - flameSize.height) / 2,
+                                   width: flameSize.width, height: flameSize.height))
+            text.draw(at: NSPoint(x: flameSize.width + spacing, y: (height - textSize.height) / 2),
+                      withAttributes: textAttrs)
+            return true
         }
-        text.draw(at: NSPoint(x: flameSize.width + spacing, y: (height - textSize.height) / 2),
-                  withAttributes: textAttrs)
-        image.unlockFocus()
         image.isTemplate = true
         return image
     }
