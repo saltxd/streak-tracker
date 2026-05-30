@@ -130,6 +130,60 @@ check("100 → hundred", StreakTier(streak: 100) == .hundred)
 check("364 → still hundred", StreakTier(streak: 364) == .hundred)
 check("365 → year", StreakTier(streak: 365) == .year)
 
+print("Undo reset (same-day misclick recovery):")
+let u = makeStore(now: d(2026, 5, 1))
+u.refresh(now: d(2026, 5, 11))           // 10-day streak
+check("no undo available before any reset", !u.canUndoReset(now: d(2026, 5, 11)))
+u.reset(now: d(2026, 5, 11))             // misclick
+check("after reset, undo IS available same day", u.canUndoReset(now: d(2026, 5, 11)))
+check("reset dropped streak to 0", u.currentStreak == 0)
+check("reset logged a record", u.history.count == 1)
+u.undoReset(now: d(2026, 5, 11))
+check("undo restores the 10-day streak", u.currentStreak == 10)
+check("undo removes the logged record", u.history.isEmpty)
+check("undo is one-shot (not available after undo)", !u.canUndoReset(now: d(2026, 5, 11)))
+
+let u2 = makeStore(now: d(2026, 5, 1))
+u2.refresh(now: d(2026, 5, 6))
+u2.reset(now: d(2026, 5, 6))
+check("undo not available the next day", !u2.canUndoReset(now: d(2026, 5, 7)))
+
+// Undo must survive a quit/relaunch within the same day.
+let usuite = "check.\(UUID().uuidString)"
+let udef = UserDefaults(suiteName: usuite)!
+udef.removePersistentDomain(forName: usuite)
+let up1 = StreakStore(defaults: udef, calendar: cal, now: d(2026, 5, 1))
+up1.refresh(now: d(2026, 5, 9))          // 8-day streak
+up1.reset(now: d(2026, 5, 9))
+let up2 = StreakStore(defaults: udef, calendar: cal, now: d(2026, 5, 9, 18)) // relaunch, same day
+check("undo survives relaunch same day", up2.canUndoReset(now: d(2026, 5, 9, 18)))
+up2.undoReset(now: d(2026, 5, 9, 18))
+check("undo after relaunch restores streak", up2.currentStreak == 8 && up2.history.isEmpty)
+// Stale undo snapshot is dropped on next-day launch.
+let up3 = StreakStore(defaults: udef, calendar: cal, now: d(2026, 5, 9))
+up3.reset(now: d(2026, 5, 9))
+let up4 = StreakStore(defaults: udef, calendar: cal, now: d(2026, 5, 10))
+check("stale undo cleared on next-day launch", !up4.canUndoReset(now: d(2026, 5, 10)))
+udef.removePersistentDomain(forName: usuite)
+
+print("Milestone progress:")
+let m3 = Milestone(streak: 3)
+check("at 3: next is 7", m3.next == 7)
+check("at 3: previous is 0", m3.previous == 0)
+check("at 3: 4 to go", m3.remaining == 4)
+let m23 = Milestone(streak: 23)
+check("at 23: next is 30", m23.next == 30)
+check("at 23: previous is 7", m23.previous == 7)
+check("at 23: segment fraction ≈ 0.696", abs(m23.fraction - (16.0/23.0)) < 0.0001)
+check("at 23: caption '30 · 7 to go'", m23.caption == "30 · 7 to go")
+let m30 = Milestone(streak: 30)
+check("at 30: next jumps to 100", m30.next == 100)
+check("at 30: fraction resets low", m30.fraction < 0.02)
+let m400 = Milestone(streak: 400)
+check("past 365: no next", m400.next == nil)
+check("past 365: fraction is full", m400.fraction == 1)
+check("past 365: no caption", m400.caption == nil)
+
 if failures == 0 {
     print("\nAll checks passed ✅")
 } else {
