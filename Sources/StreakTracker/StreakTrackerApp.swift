@@ -8,10 +8,11 @@ struct StreakTrackerApp: App {
 
     var body: some Scene {
         MenuBarExtra {
-            MenuContent(store: delegate.store, loginItem: delegate.loginItem)
+            StreakPanel(store: delegate.store, loginItem: delegate.loginItem)
         } label: {
             StreakLabel(store: delegate.store)
         }
+        .menuBarExtraStyle(.window)
     }
 }
 
