@@ -1,70 +1,97 @@
 # Streak Tracker
 
-A dead-simple macOS menu bar streak counter — think the nofap-tracker number, sitting
-quietly in your menu bar as `🔥 N`.
+A tiny, native macOS menu bar app that counts the days you've kept something going.
+It lives quietly in your menu bar as a flame and a number, and counts up on its own
+every day. Broke the streak? One click resets it. That's the whole app.
 
-- **Counts up automatically** every new calendar day.
-- **You slipped?** Click `Reset` — back to 0; it counts 1 again tomorrow.
-- **Set start date** to backdate a streak you're already on.
-- Tracks your **longest streak** and a **history** of past streaks.
-- Flame strengthens at milestones (7 / 30 / 100 / 365 days).
-- Menu-bar only, optional **Launch at login**.
+Track anything you want to do (or not do) every day — exercise, writing, no-spend
+days, time without a cigarette, whatever. The app doesn't care what it is; it just
+counts.
 
-## How the count works
+<p align="center">
+  <img src="docs/panel-light.png" width="320" alt="Streak Tracker panel, light mode">
+  <img src="docs/panel-dark.png" width="320" alt="Streak Tracker panel, dark mode">
+</p>
 
-It never stores a number it ticks up. It stores an *anchor day* and derives the count
-from the clock, so it stays correct even if the app was closed for days, after reboots,
-and across DST / timezone changes. The model is **completed days since the anchor**: the
-anchor day reads `0`, and each full calendar day since adds `1`.
+## Features
 
-- **Start / Set start date:** anchor = that day → today reads `0`, then `1` at the next midnight.
-- **Reset:** anchor = today → today reads `0` (logs the broken streak), `1` tomorrow.
+- **Counts up automatically** every new calendar day — nothing to click daily.
+- **One-tap reset** when you slip, with a confirmation so you can't do it by accident,
+  and a same-day **Undo** in case you do.
+- **Set a start date** to backdate a streak you're already on.
+- **Milestone progress** — the flame strengthens and a bar tracks your run toward
+  7, 30, 100, and 365 days.
+- **Longest streak** is remembered.
+- **Native through and through** — SwiftUI menu bar popover, light & dark mode, your
+  system accent color, a monochrome menu-bar glyph that matches Apple's own icons.
+- **Launch at login**, menu-bar only (no Dock icon, no window clutter).
 
-Start and reset behave identically for "today" — both land on `0` — so the counter is
-consistent however a streak begins.
+## Why it's reliable
 
-## Build & run
+The count is never a number that ticks up in the background. The app stores a single
+*anchor day* and derives the count from the clock. That means it stays correct even if
+the app was closed for days, after a reboot, and across daylight-saving and timezone
+changes.
 
-Requires the Swift toolchain (Command Line Tools is enough — no full Xcode):
+The model is **completed days since the anchor**: the anchor day reads `0`, and each
+full calendar day since adds `1`.
+
+- **Start / Set start date** → today reads `0`, then `1` at the next midnight.
+- **Reset** → back to `0` today, `1` tomorrow.
+
+Both start and reset land on `0` for "today," so the counter behaves consistently
+however a streak begins.
+
+## Install
+
+Requires the Swift toolchain. The Xcode **Command Line Tools** are enough — no full
+Xcode needed:
 
 ```sh
-./build.sh              # builds + assembles StreakTracker.app
-open StreakTracker.app  # look up at your menu bar 🔥
-```
-
-Install it for keeps:
-
-```sh
+xcode-select --install   # if you don't already have the tools
+git clone https://github.com/saltxd/streak-tracker.git
+cd streak-tracker
+./build.sh               # builds + assembles StreakTracker.app
 cp -R StreakTracker.app /Applications/
 open /Applications/StreakTracker.app
 ```
 
-For **Launch at login** to stick, run it from `/Applications` and approve it in
-System Settings › General › Login Items if macOS prompts.
+Then look up at your menu bar. To have it start automatically, open the panel and turn
+on **Launch at login** (run it from `/Applications` so the setting sticks).
 
-## Develop
+> The app is ad-hoc signed, so on first launch macOS may ask you to confirm opening it
+> (right-click the app → Open, or allow it in System Settings › Privacy & Security).
+
+## Development
 
 ```sh
-swift run StreakKitCheck   # runs the logic checks (works under Command Line Tools)
 swift build                # debug build
+swift run StreakKitCheck   # run the logic checks
 ```
 
-> Tests are a plain runnable executable, not an XCTest target, because XCTest / the
-> Testing framework aren't available with Command Line Tools alone.
+The streak logic (calendar math, persistence, milestones, undo) lives in a UI-free
+`StreakKit` module and is covered by `StreakKitCheck`, a runnable test program. It's a
+plain executable rather than an XCTest target because XCTest isn't available with the
+Command Line Tools alone.
 
-## Layout
+## Project layout
 
 | Path | Purpose |
 |---|---|
 | `Sources/StreakKit/DayMath.swift` | Calendar-day arithmetic (pure) |
-| `Sources/StreakKit/StreakStore.swift` | Persistence + derived streak values |
+| `Sources/StreakKit/StreakStore.swift` | Persistence + derived streak values, undo |
 | `Sources/StreakKit/StreakTier.swift` | Milestone thresholds (7/30/100/365), pure |
+| `Sources/StreakKit/Milestone.swift` | Progress toward the next milestone (pure) |
 | `Sources/StreakKit/ResetRecord.swift` | One past streak (date + length) |
 | `Sources/StreakTracker/StreakTrackerApp.swift` | App entry, midnight timer, wake observer |
-| `Sources/StreakTracker/MenuBarIcon.swift` | Composites the menu-bar flame + number |
-| `Sources/StreakTracker/MenuContent.swift` | Dropdown menu, reset confirm, history |
+| `Sources/StreakTracker/StreakPanel.swift` | The menu bar popover UI |
+| `Sources/StreakTracker/MenuBarIcon.swift` | The monochrome menu-bar flame + number |
 | `Sources/StreakTracker/StartDatePicker.swift` | "Set start date" calendar dialog |
 | `Sources/StreakTracker/LoginItem.swift` | Launch-at-login toggle (`SMAppService`) |
-| `Sources/StreakKitCheck/main.swift` | Runnable logic checks (`swift run StreakKitCheck`) |
+| `Sources/StreakKitCheck/main.swift` | Runnable logic checks |
 | `Tools/generate-icon.swift` | Regenerates the app icon artwork |
 | `build.sh` | Builds + bundles the `.app` |
+
+## License
+
+MIT — see [LICENSE](LICENSE).
