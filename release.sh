@@ -8,7 +8,7 @@ set -euo pipefail
 APP_NAME="StreakTracker"
 DISPLAY_NAME="Streak Tracker"
 BUNDLE_ID="com.saltxd.streaktracker"
-VERSION="${1:-1.0.0}"
+VERSION="${1:-1.0.0}"; VERSION="${VERSION#v}"   # accept v1.0.0 or 1.0.0
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 APP="$ROOT/$APP_NAME.app"
