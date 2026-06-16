@@ -1,0 +1,56 @@
+name: Release
+
+# Builds a universal (arm64 + x86_64) StreakTracker.app on a macOS runner with a
+# complete Xcode toolchain and attaches StreakTracker.app.zip to the matching release.
+# Trigger manually (workflow_dispatch) or by pushing a v* tag.
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Release tag to attach the build to (e.g. v1.0.0)"
+        default: "v1.0.0"
+        required: true
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Show toolchain
+        run: swift --version && xcodebuild -version
+
+      - name: Resolve tag
+        id: tag
+        run: |
+          if [ "${{ github.event_name }}" = "push" ]; then
+            echo "tag=${GITHUB_REF_NAME}" >> "$GITHUB_OUTPUT"
+          else
+            echo "tag=${{ github.event.inputs.tag }}" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Build universal .app + zip
+        run: ./release.sh "${{ steps.tag.outputs.tag }}"
+
+      - name: Verify bundle
+        run: |
+          BIN="StreakTracker.app/Contents/MacOS/StreakTracker"
+          echo "arches: $(lipo -archs "$BIN")"
+          lipo -archs "$BIN" | grep -q arm64
+          lipo -archs "$BIN" | grep -q x86_64
+          codesign -dv StreakTracker.app 2>&1 | head -5 || true
+          ls -lh StreakTracker.app.zip
+
+      - name: Upload asset to release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release upload "${{ steps.tag.outputs.tag }}" StreakTracker.app.zip \
+            --clobber --repo "${{ github.repository }}"
