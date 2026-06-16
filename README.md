@@ -44,8 +44,28 @@ however a streak begins.
 
 ## Install
 
-Requires the Swift toolchain. The Xcode **Command Line Tools** are enough — no full
-Xcode needed:
+### Download (no build needed)
+
+Grab `StreakTracker.app.zip` from the
+[latest release](https://github.com/saltxd/streak-tracker/releases/latest), unzip it,
+and drag **StreakTracker.app** into `/Applications`.
+
+The app is signed ad-hoc (not notarized by Apple), so macOS quarantines the download.
+Clear the quarantine flag once, then open it:
+
+```sh
+xattr -dr com.apple.quarantine /Applications/StreakTracker.app
+open /Applications/StreakTracker.app
+```
+
+(Or right-click the app → **Open** → **Open**; if macOS still refuses, allow it under
+System Settings › Privacy & Security.) Requires macOS 14 (Sonoma) or later; the build
+is universal (Apple Silicon + Intel).
+
+### Build from source
+
+Requires the Swift toolchain. On a stable macOS the Xcode **Command Line Tools** are
+enough — no full Xcode needed:
 
 ```sh
 xcode-select --install   # if you don't already have the tools
@@ -58,9 +78,6 @@ open /Applications/StreakTracker.app
 
 Then look up at your menu bar. To have it start automatically, open the panel and turn
 on **Launch at login** (run it from `/Applications` so the setting sticks).
-
-> The app is ad-hoc signed, so on first launch macOS may ask you to confirm opening it
-> (right-click the app → Open, or allow it in System Settings › Privacy & Security).
 
 ## Development
 
