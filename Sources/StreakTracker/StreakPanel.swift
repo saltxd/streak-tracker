@@ -168,22 +168,31 @@ struct StreakPanel: View {
                     .tracking(0.6)
                     .foregroundStyle(.secondary)
                     .padding(.horizontal, 8)
-
-                // NSPopover has no auto-scroll; cap the height and scroll past a few streaks.
-                ScrollView {
-                    VStack(spacing: 2) {
-                        ForEach(others) { streak in
-                            StreakListRow(name: streak.name, count: roster.count(for: streak.id)) {
-                                roster.setActive(streak.id)
-                            }
-                        }
-                    }
-                }
-                .frame(maxHeight: 150)
+                streakList(others)
             }
 
             // Always available — even with a single streak (the migrated user's first add).
             PanelRow(title: "Add streak", systemImage: "plus", tint: .accentColor) { addStreak() }
+        }
+    }
+
+    /// Rows for the non-active streaks. Rendered **directly** — a `ScrollView` collapses to zero
+    /// height inside the self-sizing `.window` popover (no intrinsic content height), which would
+    /// hide the rows entirely. Only switch to a fixed-height scroller once there are too many to
+    /// show at once.
+    @ViewBuilder
+    private func streakList(_ others: [Streak]) -> some View {
+        let rows = VStack(spacing: 2) {
+            ForEach(others) { streak in
+                StreakListRow(name: streak.name, count: roster.count(for: streak.id)) {
+                    roster.setActive(streak.id)
+                }
+            }
+        }
+        if others.count > 6 {
+            ScrollView { rows }.frame(height: 240)
+        } else {
+            rows
         }
     }
 
