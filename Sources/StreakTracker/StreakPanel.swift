@@ -31,6 +31,7 @@ struct StreakPanel: View {
         .padding(.top, 18)
         .padding(.bottom, 12)
         .frame(width: 300)
+        .tint(warmAccent)   // drives the toggle + .borderedProminent button consistently
         .animation(.spring(duration: 0.35), value: roster.activeCount)
         .animation(.easeInOut(duration: 0.25), value: roster.activeID)
     }
@@ -46,17 +47,17 @@ struct StreakPanel: View {
                 milestoneBar(count: count).padding(.top, 14)
             }
 
-            Divider().padding(.vertical, 14)
+            Divider().padding(.horizontal, 4).padding(.vertical, 14)
 
             stats(active)
             if let last = active.lastReset {
                 lastResetFootnote(last).padding(.top, 8)
             }
 
-            Divider().padding(.vertical, 14)
+            Divider().padding(.horizontal, 4).padding(.vertical, 14)
 
             otherStreaks(others)
-            Divider().padding(.vertical, 10)
+            Divider().padding(.horizontal, 4).padding(.vertical, 10)
             actions(active, count: count)
         }
     }
@@ -66,7 +67,7 @@ struct StreakPanel: View {
     private func hero(_ active: Streak, count: Int) -> some View {
         let tier = StreakTier(streak: count)
         let isLit = tier.isLit
-        return VStack(spacing: 4) {
+        return VStack(spacing: 2) {
             Image(systemName: isLit ? "flame.fill" : "flame")
                 .font(.system(size: 26, weight: flameWeight(tier)))
                 .symbolRenderingMode(.hierarchical)
@@ -92,6 +93,7 @@ struct StreakPanel: View {
             }
             .buttonStyle(.plain)
             .help("Rename streak")
+            .padding(.top, 4)   // breathe between the big number and its name
 
             if count == 0 {
                 Text("counts 1 tomorrow")
@@ -154,7 +156,7 @@ struct StreakPanel: View {
     private func lastResetFootnote(_ last: ResetRecord) -> some View {
         Text("Last reset \(agoPhrase(daysAgo(last.endedOn))) · broke a \(last.length)-\(dayWord(last.length)) streak")
             .font(.caption)
-            .foregroundStyle(.tertiary)
+            .foregroundStyle(.secondary)   // .tertiary can drop below legible on vibrancy
             .frame(maxWidth: .infinity, alignment: .leading)
     }
 
@@ -172,7 +174,9 @@ struct StreakPanel: View {
             }
 
             // Always available — even with a single streak (the migrated user's first add).
-            PanelRow(title: "Add streak", systemImage: "plus", tint: .accentColor) { addStreak() }
+            // Detached from the streak list so it reads as an action, not another streak.
+            PanelRow(title: "Add streak", systemImage: "plus", tint: warmAccent) { addStreak() }
+                .padding(.top, others.isEmpty ? 0 : 6)
         }
     }
 
@@ -201,7 +205,7 @@ struct StreakPanel: View {
     private func actions(_ active: Streak, count: Int) -> some View {
         VStack(spacing: 2) {
             if roster.canUndoReset(active.id) {
-                PanelRow(title: "Undo reset", systemImage: "arrow.uturn.backward", tint: .accentColor) {
+                PanelRow(title: "Undo reset", systemImage: "arrow.uturn.backward", tint: warmAccent) {
                     roster.undoReset(active.id)
                 }
                 .transition(.opacity.combined(with: .move(edge: .top)))
@@ -217,19 +221,19 @@ struct StreakPanel: View {
             }
 
             PanelRow(title: "Delete streak…", systemImage: "trash",
-                     tint: .secondary, destructiveHover: true) { confirmDelete() }
+                     tint: .secondary, iconTint: .red.opacity(0.65), destructiveHover: true) { confirmDelete() }
 
             Toggle(isOn: Binding(get: { loginItem.isEnabled },
                                  set: { loginItem.setEnabled($0) })) {
-                Label("Launch at login", systemImage: "power")
+                Label("Launch at login", systemImage: "arrow.up.forward.app")
                     .labelStyle(PanelLabelStyle())
             }
             .toggleStyle(.switch)
             .controlSize(.small)
             .padding(.horizontal, 8)
-            .padding(.vertical, 4)
+            .padding(.vertical, 5)   // match PanelRow's vertical padding so the column aligns
 
-            Divider().padding(.vertical, 6)
+            Divider().padding(.horizontal, 4).padding(.vertical, 6)
 
             PanelRow(title: "Quit Streak Tracker", systemImage: "power",
                      showIcon: false, trailing: "⌘Q") {
@@ -249,7 +253,7 @@ struct StreakPanel: View {
                     .foregroundStyle(.tertiary)
                 Text("No streaks yet")
                     .font(.headline)
-                Text("Track your first habit — it counts 0 today and ticks to 1 tomorrow.")
+                Text("Tracks a habit day-by-day — starts at 0, ticks up tomorrow.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)
@@ -260,19 +264,19 @@ struct StreakPanel: View {
             .frame(maxWidth: .infinity)
             .padding(.vertical, 10)
 
-            Divider().padding(.vertical, 12)
+            Divider().padding(.horizontal, 4).padding(.vertical, 12)
 
             Toggle(isOn: Binding(get: { loginItem.isEnabled },
                                  set: { loginItem.setEnabled($0) })) {
-                Label("Launch at login", systemImage: "power")
+                Label("Launch at login", systemImage: "arrow.up.forward.app")
                     .labelStyle(PanelLabelStyle())
             }
             .toggleStyle(.switch)
             .controlSize(.small)
             .padding(.horizontal, 8)
-            .padding(.vertical, 4)
+            .padding(.vertical, 5)   // match PanelRow's vertical padding so the column aligns
 
-            Divider().padding(.vertical, 6)
+            Divider().padding(.horizontal, 4).padding(.vertical, 6)
 
             PanelRow(title: "Quit Streak Tracker", systemImage: "power",
                      showIcon: false, trailing: "⌘Q") {
@@ -289,6 +293,15 @@ struct StreakPanel: View {
             ? [Color(red: 1.00, green: 0.80, blue: 0.42), Color(red: 1.00, green: 0.52, blue: 0.22)]
             : [Color(red: 1.00, green: 0.70, blue: 0.24), Color(red: 0.96, green: 0.38, blue: 0.13)]
         return LinearGradient(colors: stops, startPoint: .top, endPoint: .bottom)
+    }
+
+    /// UI accent in the amber family — one notch deeper/calmer than the hero gradient, so the
+    /// streak number stays the loudest thing. Set app-wide (not the system accent) so interactive
+    /// bits read as ours and look the same on every Mac, regardless of the user's macOS accent.
+    private var warmAccent: Color {
+        scheme == .dark
+            ? Color(red: 1.00, green: 0.62, blue: 0.24)   // #FF9E3D — brighter on dark vibrancy
+            : Color(red: 0.90, green: 0.45, blue: 0.10)   // #E6731A — deeper for AA on light
     }
 
     private func flameWeight(_ tier: StreakTier) -> Font.Weight {
@@ -404,6 +417,7 @@ private struct PanelRow: View {
     let title: String
     var systemImage: String = ""
     var tint: Color = .primary
+    var iconTint: Color? = nil          // overrides the resting icon color (e.g. red for destructive)
     var destructiveHover: Bool = false
     var showIcon: Bool = true
     var trailing: String? = nil
@@ -417,7 +431,8 @@ private struct PanelRow: View {
                 if showIcon {
                     Image(systemName: systemImage)
                         .frame(width: 16)
-                        .foregroundStyle(tint == .primary ? AnyShapeStyle(.secondary) : AnyShapeStyle(tint))
+                        .foregroundStyle(iconTint.map { AnyShapeStyle($0) }
+                                         ?? (tint == .primary ? AnyShapeStyle(.secondary) : AnyShapeStyle(tint)))
                 }
                 Text(title)
                     .foregroundStyle(destructiveHover && hovering ? AnyShapeStyle(.red) : AnyShapeStyle(tint))
