@@ -1,0 +1,42 @@
+name: CI
+
+# Compile-checks the whole package on a macOS runner with a full Xcode toolchain (the
+# SwiftUI app target needs the SwiftUIMacros plugin, which Command Line Tools alone lack),
+# runs the logic test harness, assembles the .app bundle, and uploads it as a downloadable
+# artifact so a change can be run and eyeballed without building locally.
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Show toolchain
+        run: swift --version && xcodebuild -version
+
+      - name: Logic checks (StreakKit)
+        run: swift run StreakKitCheck
+
+      - name: Build .app bundle
+        run: ./build.sh
+
+      - name: Verify bundle
+        run: |
+          BIN="StreakTracker.app/Contents/MacOS/StreakTracker"
+          test -f "$BIN" || { echo "missing binary"; exit 1; }
+          codesign -dv StreakTracker.app 2>&1 | head -5 || true
+
+      - name: Zip app
+        run: ditto -c -k --keepParent StreakTracker.app StreakTracker.app.zip
+
+      - name: Upload app artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: StreakTracker-app
+          path: StreakTracker.app.zip

@@ -8,36 +8,38 @@ struct StreakTrackerApp: App {
 
     var body: some Scene {
         MenuBarExtra {
-            StreakPanel(store: delegate.store, loginItem: delegate.loginItem)
+            StreakPanel(roster: delegate.roster, loginItem: delegate.loginItem)
         } label: {
-            StreakLabel(store: delegate.store)
+            StreakLabel(roster: delegate.roster)
         }
         .menuBarExtraStyle(.window)
     }
 }
 
-/// The number in the menu bar. Uses an SF Symbol flame (a *template* glyph) rather
-/// than the 🔥 emoji, so it renders monochrome and adapts to light/dark + highlight
-/// exactly like the native Wi-Fi/battery icons. A dedicated view so Observation
-/// reliably re-renders it on every change (midnight, reset, wake-from-sleep).
+/// The number in the menu bar — the **active** streak's flame + count. Uses an SF Symbol flame
+/// (a *template* glyph) rather than the 🔥 emoji, so it renders monochrome and adapts to
+/// light/dark + highlight exactly like the native Wi-Fi/battery icons. A dedicated view that
+/// reads the observed `activeCount` *inside* its body, so Observation reliably re-renders it on
+/// every change: midnight rollover, reset, wake-from-sleep, and switching the active streak.
 private struct StreakLabel: View {
-    let store: StreakStore
+    let roster: StreakRoster
     var body: some View {
-        Image(nsImage: MenuBarIcon.make(count: store.currentStreak))
+        Image(nsImage: MenuBarIcon.make(count: roster.activeCount))
             .renderingMode(.template)
     }
 }
 
-/// Owns app-lifetime concerns: the single store, the midnight refresh timer, and the
-/// wake-from-sleep observer. Keeping these here (not in the SwiftUI graph) makes the
-/// timing rock-solid regardless of whether the menu is ever opened.
+/// Owns app-lifetime concerns: the single roster, the midnight refresh timer, and the
+/// wake-from-sleep observer. Keeping these here (not in the SwiftUI graph) makes the timing
+/// rock-solid regardless of whether the menu is ever opened. `refresh()` advances *every*
+/// streak (each derives its own count), so a later switch never shows a stale number.
 final class AppDelegate: NSObject, NSApplicationDelegate {
-    let store = StreakStore()
+    let roster = StreakRoster()
     let loginItem = LoginItem()
     private var midnightTimer: Timer?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
-        store.refresh()
+        roster.refresh()
         scheduleMidnightRefresh()
         NSWorkspace.shared.notificationCenter.addObserver(
             self, selector: #selector(systemDidWake),
@@ -46,12 +48,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     @objc private func systemDidWake() {
-        store.refresh()
+        roster.refresh()
         scheduleMidnightRefresh()
     }
 
     @objc private func midnightFired() {
-        store.refresh()
+        roster.refresh()
         scheduleMidnightRefresh()
     }
 
