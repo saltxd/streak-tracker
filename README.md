@@ -54,17 +54,29 @@ Grab `StreakTracker.app.zip` from the
 [latest release](https://github.com/saltxd/streak-tracker/releases/latest), unzip it,
 and drag **StreakTracker.app** into `/Applications`.
 
-The app is signed ad-hoc (not notarized by Apple), so macOS quarantines the download.
-Clear the quarantine flag once, then open it:
+#### First launch — getting past the macOS warning
+
+Streak Tracker is open-source and signed ad-hoc (not notarized through Apple's paid
+Developer program), so the **first** time you open it macOS warns that it "can't verify
+it's free of malware." That's expected for any indie app — here's the one-time, no-Terminal
+way past it:
+
+1. Double-click **StreakTracker.app**. macOS blocks it — click **Done**.
+2. Open **System Settings → Privacy & Security** and scroll down. You'll see
+   *"StreakTracker.app was blocked to protect your Mac."* → click **Open Anyway**.
+3. Confirm with **Open Anyway** (Touch ID / password). It launches, and macOS won't ask again.
+
+That's it — the flame appears in your menu bar.
+
+<details>
+<summary>Prefer the Terminal? One line does the same thing.</summary>
 
 ```sh
-xattr -dr com.apple.quarantine /Applications/StreakTracker.app
-open /Applications/StreakTracker.app
+xattr -dr com.apple.quarantine /Applications/StreakTracker.app && open /Applications/StreakTracker.app
 ```
+</details>
 
-(Or right-click the app → **Open** → **Open**; if macOS still refuses, allow it under
-System Settings › Privacy & Security.) Requires macOS 14 (Sonoma) or later; the build
-is universal (Apple Silicon + Intel).
+Requires macOS 14 (Sonoma) or later; the release build is universal (Apple Silicon + Intel).
 
 ### Build from source
 
