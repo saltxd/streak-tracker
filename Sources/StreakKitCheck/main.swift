@@ -255,7 +255,21 @@ let emptyBlob = #"{"schemaVersion":1,"streaks":[],"activeID":"00000000-0000-0000
 edef.set(Data(emptyBlob.utf8), forKey: "roster.v1")            // ...but a VALID empty blob
 let stayEmpty = StreakRoster(defaults: edef, calendar: cal, now: d(2026, 6, 27))
 check("valid empty blob stays empty (legacy NOT resurrected)", stayEmpty.isEmpty)
+check("loading a blob with legacy keys self-heals the migrated flag", edef.bool(forKey: "roster.migrated"))
 edef.removePersistentDomain(forName: esuite)
+
+// Once migrated, a corrupt blob must NOT resurrect now-stale legacy data (that would overwrite the
+// user's current streaks). Recover to an empty roster instead.
+let rsuite = "check.\(UUID().uuidString)"
+let rdef = UserDefaults(suiteName: rsuite)!
+rdef.removePersistentDomain(forName: rsuite)
+rdef.set(day(2026, 5, 31), forKey: "streak.startDay")           // stale legacy single-streak
+rdef.set(true, forKey: "streak.everStarted")
+rdef.set(true, forKey: "roster.migrated")                       // already migrated
+rdef.set(Data([0x00, 0xff]), forKey: "roster.v1")               // corrupt blob
+let noResurrect = StreakRoster(defaults: rdef, calendar: cal, now: d(2026, 6, 27))
+check("already-migrated + corrupt blob does NOT resurrect legacy", noResurrect.isEmpty)
+rdef.removePersistentDomain(forName: rsuite)
 
 print("Milestone progress:")
 let m3 = Milestone(streak: 3)

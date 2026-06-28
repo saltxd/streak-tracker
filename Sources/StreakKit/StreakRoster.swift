@@ -66,43 +66,63 @@ public final class StreakRoster {
 
         // Advance every streak from the clock and persist if anything moved.
         refresh(now: now)
-        // For a freshly migrated/created roster, persist the blob even if refresh wasn't dirty,
-        // then mark the legacy import done LAST (so a crash mid-migration safely retries).
-        if loaded.source != .existing {
-            save()
-            if loaded.source == .migrated { defaults.set(true, forKey: Key.migrated) }
-        }
+        // Persist a freshly migrated/created/recovered roster even if refresh wasn't dirty, then
+        // record that migration is done LAST (so a crash mid-migration safely retries). The flag
+        // also self-heals here when a valid blob loaded but an earlier flag write was lost.
+        if loaded.persist { save() }
+        if loaded.markMigrated { defaults.set(true, forKey: Key.migrated) }
     }
 
     // MARK: Loading & migration
 
-    private enum Source { case existing, migrated, fresh }
-    private struct Loaded { var streaks: [Streak]; var activeID: UUID; var source: Source }
+    /// Outcome of loading: which streaks/active to use, whether to persist them now, and whether
+    /// to record that the (one-way) legacy import has happened.
+    private struct Loaded {
+        var streaks: [Streak]
+        var activeID: UUID
+        var persist: Bool
+        var markMigrated: Bool
+    }
 
     private static func loadOrMigrate(defaults: UserDefaults, calendar: Calendar, now: Date) -> Loaded {
-        // 1. Existing roster blob. A *decode error* (corrupt/garbage) must NOT be swallowed into
-        //    "fresh install" — that would silently reset the visible streak to 0. Fall through to
-        //    legacy recovery instead. A valid-but-empty blob is a legitimate deleted-all state.
+        let alreadyMigrated = defaults.bool(forKey: Key.migrated)
+        let hasLegacy = defaults.object(forKey: Key.legacyStartDay) != nil
+            || defaults.bool(forKey: Key.legacyEverStarted)
+
+        // 1. Existing roster blob. A *decode error* (corrupt/garbage) must NOT be swallowed into a
+        //    "fresh install" — that would silently reset the visible streak to 0 — so fall through
+        //    to recovery. A valid-but-empty blob is a legitimate deleted-all state.
         if let data = defaults.data(forKey: Key.roster) {
             do {
                 let blob = try decoder.decode(RosterBlob.self, from: data)
                 let active = blob.streaks.contains { $0.id == blob.activeID }
                     ? blob.activeID
                     : (blob.streaks.first?.id ?? blob.activeID)
-                return Loaded(streaks: blob.streaks, activeID: active, source: .existing)
+                // Self-heal the migrated flag if an earlier flag write was lost (crash between the
+                // blob write and the flag write) — so legacy can never be resurrected afterwards.
+                return Loaded(streaks: blob.streaks, activeID: active,
+                              persist: false, markMigrated: hasLegacy && !alreadyMigrated)
             } catch {
-                // corrupt → try to recover from the legacy keys below
+                // corrupt → recover below
             }
         }
 
-        // 2. Migrate / recover from the original single-streak keys.
-        if let migrated = migrateLegacy(defaults: defaults, calendar: calendar) {
-            return Loaded(streaks: [migrated], activeID: migrated.id, source: .migrated)
+        // 2. First upgrade from the original single-streak keys. Guarded by the migrated flag so a
+        //    later corrupt/absent blob can never resurrect now-stale legacy data over the user's
+        //    current streaks.
+        if !alreadyMigrated, let migrated = migrateLegacy(defaults: defaults, calendar: calendar) {
+            return Loaded(streaks: [migrated], activeID: migrated.id, persist: true, markMigrated: true)
         }
 
-        // 3. Genuine first launch: one fresh streak anchored today (reads 0 now, 1 tomorrow).
+        // 3a. Already migrated but the blob is gone/corrupt: do NOT resurrect stale legacy data.
+        //     Recover to an empty roster (the user re-adds); persist to clear the corrupt blob.
+        if alreadyMigrated {
+            return Loaded(streaks: [], activeID: UUID(), persist: true, markMigrated: false)
+        }
+
+        // 3b. Genuine first launch: one fresh streak anchored today (reads 0 now, 1 tomorrow).
         let fresh = Streak(name: "Streak", startDay: DayMath.today(now, calendar: calendar))
-        return Loaded(streaks: [fresh], activeID: fresh.id, source: .fresh)
+        return Loaded(streaks: [fresh], activeID: fresh.id, persist: true, markMigrated: true)
     }
 
     /// Build one `Streak` from the legacy keys, reading **each value in the format the original
@@ -149,10 +169,13 @@ public final class StreakRoster {
     public func refresh(now: Date = Date()) {
         var dirty = false
         for i in streaks.indices {
-            let before = streaks[i]
-            streaks[i].clearStaleUndo(now: now, calendar: calendar)
-            streaks[i].bumpLongest(now: now, calendar: calendar)
-            if streaks[i] != before { dirty = true }
+            var updated = streaks[i]
+            updated.clearStaleUndo(now: now, calendar: calendar)
+            updated.bumpLongest(now: now, calendar: calendar)
+            if updated != streaks[i] {
+                streaks[i] = updated          // only write (and fire observation) on a real change
+                dirty = true
+            }
         }
         recomputeCounts(now: now)
         if dirty { save() }
@@ -161,7 +184,7 @@ public final class StreakRoster {
     private func recomputeCounts(now: Date) {
         var next: [UUID: Int] = [:]
         for s in streaks { next[s.id] = s.currentStreak(now: now, calendar: calendar) }
-        counts = next
+        if next != counts { counts = next }   // avoid spurious observation events on no-op ticks
     }
 
     // MARK: Collection mutations (call sites are Button actions / post-NSAlert — never in a body)
