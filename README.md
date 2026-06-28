@@ -6,7 +6,8 @@ every day. Broke the streak? One click resets it. That's the whole app.
 
 Track anything you want to do (or not do) every day — exercise, writing, no-spend
 days, time without a cigarette, whatever. The app doesn't care what it is; it just
-counts.
+counts. Keep **several** going at once if you like: the menu bar shows your active
+streak, and the rest are one click away in the panel.
 
 <p align="center">
   <img src="docs/panel-light.png" width="320" alt="Streak Tracker panel, light mode">
@@ -16,6 +17,9 @@ counts.
 ## Features
 
 - **Counts up automatically** every new calendar day — nothing to click daily.
+- **Track multiple streaks** — keep a list of named streaks; the menu bar shows the one
+  you mark *active*, and tapping any other in the panel switches to it. Add, rename, and
+  delete from the panel. Each keeps its own count, longest, history, and undo.
 - **One-tap reset** when you slip, with a confirmation so you can't do it by accident,
   and a same-day **Undo** in case you do.
 - **Set a start date** to backdate a streak you're already on.
@@ -96,14 +100,16 @@ Command Line Tools alone.
 | Path | Purpose |
 |---|---|
 | `Sources/StreakKit/DayMath.swift` | Calendar-day arithmetic (pure) |
-| `Sources/StreakKit/StreakStore.swift` | Persistence + derived streak values, undo |
+| `Sources/StreakKit/Streak.swift` | One streak: name + derived count, reset/undo/backdate (pure) |
+| `Sources/StreakKit/StreakRoster.swift` | The collection: active selection, persistence, legacy migration |
 | `Sources/StreakKit/StreakTier.swift` | Milestone thresholds (7/30/100/365), pure |
 | `Sources/StreakKit/Milestone.swift` | Progress toward the next milestone (pure) |
 | `Sources/StreakKit/ResetRecord.swift` | One past streak (date + length) |
 | `Sources/StreakTracker/StreakTrackerApp.swift` | App entry, midnight timer, wake observer |
-| `Sources/StreakTracker/StreakPanel.swift` | The menu bar popover UI |
+| `Sources/StreakTracker/StreakPanel.swift` | The menu bar popover UI (hero + streak list) |
 | `Sources/StreakTracker/MenuBarIcon.swift` | The monochrome menu-bar flame + number |
 | `Sources/StreakTracker/StartDatePicker.swift` | "Set start date" calendar dialog |
+| `Sources/StreakTracker/NamePrompt.swift` | Add / rename streak text dialog (`NSAlert`) |
 | `Sources/StreakTracker/LoginItem.swift` | Launch-at-login toggle (`SMAppService`) |
 | `Sources/StreakKitCheck/main.swift` | Runnable logic checks |
 | `Tools/generate-icon.swift` | Regenerates the app icon artwork |
