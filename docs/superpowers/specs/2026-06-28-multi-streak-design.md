@@ -109,9 +109,12 @@ public struct UndoSnapshot: Codable, Equatable, Sendable {
   separate from the legacy reader, which must use the legacy formats.)
 - **Migration (in `StreakRoster.init`, before first label render, `@ObservationIgnored`
   defaults):**
-  1. If `roster.v1` exists → decode with `do/catch`. On success, load. **On decode error →
-     fall through to legacy recovery** (never `try?`→nil, which would masquerade as a fresh
-     install and reset the menu bar to 0).
+  1. If `roster.v1` exists → decode with `do/catch`. On success, load (and self-heal the
+     `migrated` flag if legacy keys are still present). **On decode error → fall through to
+     recovery** (never `try?`→nil, which would masquerade as a fresh install and reset the menu
+     bar to 0). Recovery is **gated by the `migrated` flag**: only re-import legacy when
+     `migrated == false`. Once migrated, a corrupt/absent blob recovers to an **empty roster**
+     (user re-adds) rather than resurrecting now-stale legacy data over current streaks.
   2. Else if legacy `streak.*` keys exist (or `everStarted == true`) → build **one** `Streak`:
      fresh UUID, name `"Streak"`, `startDay`/undo dates read as **raw `NSDate`**, `history`
      decoded with a **default-strategy** `JSONDecoder`, `longestStreak` from the int key, undo

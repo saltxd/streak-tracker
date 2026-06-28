@@ -55,11 +55,8 @@ struct StreakPanel: View {
 
             Divider().padding(.vertical, 14)
 
-            if !others.isEmpty {
-                otherStreaks(others)
-                Divider().padding(.vertical, 10)
-            }
-
+            otherStreaks(others)
+            Divider().padding(.vertical, 10)
             actions(active, count: count)
         }
     }
@@ -165,24 +162,27 @@ struct StreakPanel: View {
 
     private func otherStreaks(_ others: [Streak]) -> some View {
         VStack(alignment: .leading, spacing: 4) {
-            Text("OTHER STREAKS")
-                .font(.caption2.weight(.semibold))
-                .tracking(0.6)
-                .foregroundStyle(.secondary)
-                .padding(.horizontal, 8)
+            if !others.isEmpty {
+                Text("OTHER STREAKS")
+                    .font(.caption2.weight(.semibold))
+                    .tracking(0.6)
+                    .foregroundStyle(.secondary)
+                    .padding(.horizontal, 8)
 
-            // NSPopover has no auto-scroll; cap the height and scroll past a few streaks.
-            ScrollView {
-                VStack(spacing: 2) {
-                    ForEach(others) { streak in
-                        StreakListRow(name: streak.name, count: roster.count(for: streak.id)) {
-                            roster.setActive(streak.id)
+                // NSPopover has no auto-scroll; cap the height and scroll past a few streaks.
+                ScrollView {
+                    VStack(spacing: 2) {
+                        ForEach(others) { streak in
+                            StreakListRow(name: streak.name, count: roster.count(for: streak.id)) {
+                                roster.setActive(streak.id)
+                            }
                         }
                     }
                 }
+                .frame(maxHeight: 150)
             }
-            .frame(maxHeight: 150)
 
+            // Always available — even with a single streak (the migrated user's first add).
             PanelRow(title: "Add streak", systemImage: "plus", tint: .accentColor) { addStreak() }
         }
     }
@@ -197,6 +197,8 @@ struct StreakPanel: View {
                 }
                 .transition(.opacity.combined(with: .move(edge: .top)))
             }
+
+            PanelRow(title: "Rename streak…", systemImage: "pencil") { renameActive() }
 
             PanelRow(title: "Set start date…", systemImage: "calendar") { chooseStartDate() }
 
