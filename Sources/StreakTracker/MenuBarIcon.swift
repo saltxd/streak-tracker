@@ -32,7 +32,11 @@ enum MenuBarIcon {
         let flameSize = flame?.size ?? .zero
 
         let text = "\(count)" as NSString
-        let font = NSFont.menuBarFont(ofSize: 0)
+        // Monospaced digits at the menu-bar font size so the glyph keeps a stable width as the
+        // count ticks 9→10→100 or when switching the active streak — right-of-notch space is
+        // scarce, and a reflowing menu bar item looks janky.
+        let menuBarFont = NSFont.menuBarFont(ofSize: 0)
+        let font = NSFont.monospacedDigitSystemFont(ofSize: menuBarFont.pointSize, weight: .regular)
         let textAttrs: [NSAttributedString.Key: Any] = [.font: font, .foregroundColor: NSColor.black]
         let textSize = text.size(withAttributes: textAttrs)
 
